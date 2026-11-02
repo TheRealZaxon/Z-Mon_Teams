@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zaxon Monsters Team</title>
+<style>
+  :root { --bg: #000; --text: #fff; --label: #a8a8a8; --box: #cfcfcf; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/22px Consolas, "DejaVu Sans Mono", "Courier New", monospace; }
+  .page { display: flex; gap: 40px; padding: 12px 14px 40px; }
+  .team { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 600px)); gap: 26px 0; align-content: start; }
+  .mon { display: flex; gap: 30px; }
+  .pic { position: relative; flex: none; width: 150px; height: 150px; border: 1px solid var(--box); }
+  .pic.loaded { border-color: transparent; }
+  .pic img.sprite { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .pic img.item { position: absolute; right: 2px; bottom: 2px; width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+  .info { white-space: pre-wrap; padding-top: 4px; min-width: 0; }
+  .lbl { color: var(--label); }
+  .side { flex: none; width: 300px; font-family: Arial, Helvetica, sans-serif; padding-top: 20px; }
+  .side h1 { margin: 0 0 22px; font-size: 26px; line-height: 32px; color: #d0d0d0; overflow-wrap: anywhere; }
+  .side .by { font-weight: bold; font-size: 15px; color: #d0d0d0; padding-left: 4px; }
+  .empty { padding: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 20px; line-height: 30px; }
+  @media (max-width: 1100px) {
+    .page { flex-direction: column-reverse; gap: 10px; }
+    .side { width: auto; padding-top: 6px; }
+    .team { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) { .mon { gap: 14px; } .pic { width: 100px; height: 100px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ===================================================================
+// Zaxon Monsters team viewer. The whole team is inside the code at the end of the link
+// (for example .../?1abc23...), so this page needs no server. Keep it next to the folders
+// "monster sprites" and "item sprites" so the pictures show up.
+// MOVES and ITEMS are append-only and must stay in the same order as TEAM_ID_MOVES /
+// TEAM_ID_ITEMS in control.gd. Add new monsters to MONSTERS with their game number.
+// ===================================================================
+const PLAYER_NAME = "Default User";
+const MONSTERS = {
+  1:  { name: "Charlie Kirk", types: ["Fire"],            ability: "Master Debater",       sprite: "monster sprites/charlie_kirk.png" },
+  2:  { name: "Hashirama",    types: ["Plant"],           ability: "Sage Regeneration",    sprite: "monster sprites/hashirama.png" },
+  3:  { name: "Fishstick",    types: ["Water"],           ability: "Panic Mode",           sprite: "monster sprites/fishstick.png" },
+  4:  { name: "Whomp",        types: ["Earth"],           ability: "The Wall",             sprite: "monster sprites/whomp.png" },
+  5:  { name: "Killua",       types: ["Electric"],        ability: "Godspeed",             sprite: "monster sprites/killua.png" },
+  6:  { name: "Naruto",       types: ["Wind"],            ability: "Nine-Tails Chakra",    sprite: "monster sprites/naruto.png" },
+  7:  { name: "Sub-Zero",     types: ["Frost"],           ability: "Cryomancer's Guard",   sprite: "monster sprites/sub-zero.png" },
+  8:  { name: "Kid Goku",     types: ["Neutral"],         ability: "Saiyan Spirit",        sprite: "monster sprites/kid_goku.png" },
+  9:  { name: "Todoroki",     types: ["Fire", "Frost"],   ability: "Elemental Resilience", sprite: "monster sprites/todoroki.png" },
+  10: { name: "Swamp Thing",  types: ["Plant", "Earth"],  ability: "Nature's Blessing",    sprite: "monster sprites/swamp_thing.png" },
+  11: { name: "Giyu",         types: ["Water", "Neutral"],ability: "Dead Calm",            sprite: "monster sprites/giyu.png" },
+  12: { name: "Storm",        types: ["Electric", "Wind"],ability: "Elemental Mastery",    sprite: "monster sprites/storm.png" }
+};
+const MOVES = [
+  ["Fire Punch","Fire"],["Flare Blitz","Fire"],["Flame Kick","Fire"],["Flame Jet","Fire"],["Flame Charge","Fire"],
+  ["Flamethrower","Fire"],["Overheat","Fire"],["Heatwave","Fire"],["Fire Spin","Fire"],["Blaze Blast","Fire"],
+  ["Leaf Blade","Plant"],["Wood Hammer","Plant"],["Horn Leech","Plant"],["Leafnado","Plant"],["Energy Ball","Plant"],
+  ["Leaf Storm","Plant"],["Giga Drain","Plant"],["Root Trap","Plant"],["Florae Frenzy","Plant"],
+  ["Waterfall","Water"],["Wave Crash","Water"],["Fish Slap","Water"],["Water Wave","Water"],["Aqua Beam","Water"],
+  ["Hydro Pump","Water"],["Tsunami","Water"],["Whirlpool","Water"],["Cascade Cannon","Water"],
+  ["Earthquake","Earth"],["Rock Knuckles","Earth"],["Rockslide","Earth"],["Boulder Bash","Earth"],["Earth Power","Earth"],["Sand Coffin","Earth"],
+  ["Volt Tackle","Electric"],["Chidori","Electric"],["Thunderbolt","Electric"],["Lightning","Electric"],["Volt Switch","Electric"],
+  ["Tornado","Wind"],["Hurricane","Wind"],
+  ["Avalanche","Frost"],["Frost Beam","Frost"],["Blizzard","Frost"],["Icy Wind","Frost"],
+  ["Double Edge","Neutral"],["Fake Out","Neutral"],["Swords Dance","Neutral"],["Dragon Dance","Neutral"],
+  ["Will-O-Wisp","Fire"],["Frostbite","Frost"],["Thunder Wave","Electric"],["Tailwind","Wind"],["Helping Hand","Neutral"]
+];
+const ITEMS = ["Assault Vest","Choice Band","Choice Scarf","Choice Specs","Focus Sash","Leftovers","Life Orb","Sitrus Berry"];
+const TYPE_COLORS = { Fire:"#E8742C", Plant:"#4DA64D", Water:"#3B82D6", Earth:"#9A7B4F", Electric:"#C9A227", Wind:"#7A8FD6", Frost:"#56B7D4", Neutral:"#7D7D7D" };
+// HP, ATK, SPA, DEF, SPD, SPE = red, orange, yellow, green, blue, violet
+const EV_STATS = [["HP","#ff4d4d"],["ATK","#ff9a3c"],["SPA","#ffd93d"],["DEF","#5ee06a"],["SPD","#4da3ff"],["SPE","#b67cff"]];
+const CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+function getCode() {
+  let s = location.search.slice(1) || location.hash.slice(1);
+  s = s.split("&")[0];
+  if (s.includes("=")) s = s.split("=").pop();
+  return decodeURIComponent(s).trim().toLowerCase();
+}
+
+function decode(code) {
+  if (!/^[0-9a-z]+$/.test(code)) return null;
+  const num = [];
+  for (const ch of code) {
+    let carry = CHARS.indexOf(ch);
+    for (let i = num.length - 1; i >= 0; i--) { const v = num[i] * 36 + carry; num[i] = v & 255; carry = v >> 8; }
+    while (carry > 0) { num.unshift(carry & 255); carry >>= 8; }
+  }
+  const bits = [];
+  for (const b of num) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
+  let pos = 0, bad = false;
+  const read = w => { let v = 0; for (let i = 0; i < w; i++) { v <<= 1; if (pos >= bits.length) bad = true; else v |= bits[pos]; pos++; } return v; };
+  if (read(4) !== 1) return null;
+  const nameLen = read(7), nameBytes = [];
+  for (let i = 0; i < nameLen; i++) nameBytes.push(read(8));
+  let name = new TextDecoder().decode(new Uint8Array(nameBytes)).trim() || "Team";
+  const mons = [];
+  for (let s = 0; s < 8; s++) {
+    if (!read(1)) continue;
+    const n = read(9), item = read(6), count = read(3), moves = [];
+    for (let m = 0; m < count; m++) { const id = read(7); if (MOVES[id]) moves.push(MOVES[id]); }
+    const evs = read(1) ? EV_STATS.map(() => read(6)) : null;
+    mons.push({ n, item: ITEMS[item - 1] || "", moves, evs });
+  }
+  if (bad || mons.length === 0) return null;
+  return { name, mons };
+}
+
+function span(text, cls, color) {
+  const e = document.createElement("span");
+  e.textContent = text;
+  if (cls) e.className = cls;
+  if (color) e.style.color = color;
+  return e;
+}
+
+// Tries each picture file name in turn; hides the picture if none exist
+function tryImage(img, paths, onLoad) {
+  let i = 0;
+  img.onerror = () => { i++; if (i < paths.length) img.src = encodeURI(paths[i]); else img.remove(); };
+  img.onload = onLoad || null;
+  img.src = encodeURI(paths[0]);
+}
+
+function itemFiles(name) {
+  const base = "item sprites/";
+  return [base + name.toLowerCase().replace(/[ -]/g, "_") + ".png", base + name + ".png",
+          base + name.toLowerCase().replace(/[ _-]/g, "") + ".png"];
+}
+
+function render() {
+  const root = document.getElementById("root");
+  const team = decode(getCode());
+  if (!team) {
+    root.innerHTML = '<div class="empty">No team found.<br>Open this page with a Team ID at the end of the link.</div>';
+    return;
+  }
+  document.title = team.name + " - Zaxon Monsters";
+  const page = document.createElement("div"); page.className = "page";
+  const grid = document.createElement("div"); grid.className = "team";
+  for (const m of team.mons) {
+    const data = MONSTERS[m.n] || { name: "Unknown Monster #" + m.n, types: [], ability: "???", sprite: "" };
+    const card = document.createElement("div"); card.className = "mon";
+    const pic = document.createElement("div"); pic.className = "pic";
+    if (data.sprite) {
+      const img = document.createElement("img"); img.className = "sprite"; img.alt = "";
+      pic.appendChild(img);
+      tryImage(img, [data.sprite], () => pic.classList.add("loaded"));
+    }
+    if (m.item) {
+      const it = document.createElement("img"); it.className = "item"; it.alt = "";
+      pic.appendChild(it);
+      tryImage(it, itemFiles(m.item));
+    }
+    const info = document.createElement("div"); info.className = "info";
+    const line = (...parts) => { parts.forEach(p => info.appendChild(typeof p === "string" ? document.createTextNode(p) : p)); info.appendChild(document.createTextNode("\n")); };
+    line(data.name + (m.item ? " @ " + m.item : ""));
+    line(span("Ability: ", "lbl"), data.ability);
+    line(span("Level: ", "lbl"), "50");
+    if (m.evs) {
+      const parts = [span("EVs: ", "lbl")];
+      let first = true;
+      m.evs.forEach((v, i) => {
+        if (v <= 0) return;
+        if (!first) parts.push(" / ");
+        parts.push(span(v + " " + EV_STATS[i][0], null, EV_STATS[i][1]));
+        first = false;
+      });
+      if (!first) line(...parts);
+    }
+    for (const [mv, type] of m.moves) line(span("- ", null, TYPE_COLORS[type] || "#888"), mv);
+    card.append(pic, info);
+    grid.appendChild(card);
+  }
+  const side = document.createElement("div"); side.className = "side";
+  const h = document.createElement("h1"); h.textContent = team.name;
+  side.append(h, span("by " + PLAYER_NAME, "by"));
+  page.append(grid, side);
+  root.appendChild(page);
+}
+render();
+window.addEventListener("hashchange", () => { document.getElementById("root").innerHTML = ""; render(); });
+</script>
+</body>
+</html>
