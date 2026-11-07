@@ -1,189 +1,277 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zaxon Monsters Team</title>
+<title>Z-Mon Teams</title>
 <style>
-  :root { --bg: #000; --text: #fff; --label: #a8a8a8; --box: #cfcfcf; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/22px Consolas, "DejaVu Sans Mono", "Courier New", monospace; }
-  .page { display: flex; gap: 40px; padding: 12px 14px 40px; }
-  .team { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 600px)); gap: 26px 0; align-content: start; }
-  .mon { display: flex; gap: 30px; }
-  .pic { position: relative; flex: none; width: 150px; height: 150px; border: 1px solid var(--box); }
-  .pic.loaded { border-color: transparent; }
-  .pic img.sprite { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
-  .pic img.item { position: absolute; right: 2px; bottom: 2px; width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
-  .info { white-space: pre-wrap; padding-top: 4px; min-width: 0; }
-  .lbl { color: var(--label); }
-  .side { flex: none; width: 300px; font-family: Arial, Helvetica, sans-serif; padding-top: 20px; }
-  .side h1 { margin: 0 0 22px; font-size: 26px; line-height: 32px; color: #d0d0d0; overflow-wrap: anywhere; }
-  .side .by { font-weight: bold; font-size: 15px; color: #d0d0d0; padding-left: 4px; }
-  .empty { padding: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 20px; line-height: 30px; }
-  @media (max-width: 1100px) {
-    .page { flex-direction: column-reverse; gap: 10px; }
-    .side { width: auto; padding-top: 6px; }
-    .team { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 480px) { .mon { gap: 14px; } .pic { width: 100px; height: 100px; } }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #1e2230; color: #f2f2f2; }
+  header { padding: 22px 20px 6px; text-align: center; }
+  header h1 { margin: 0; font-size: 34px; letter-spacing: 1px; }
+  header .by { margin-top: 6px; font-size: 18px; color: #b9bfd3; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .mon { background: #2b3044; border-radius: 14px; padding: 16px 18px; border: 2px solid #3a4060; }
+  .mon .top { font-size: 20px; font-weight: bold; }
+  .mon .top .at { color: #b9bfd3; font-weight: normal; }
+  .types { margin: 8px 0 10px; }
+  .type { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: bold; color: #fff; margin-right: 6px; }
+  .line { font-size: 16px; margin: 4px 0; }
+  .label { color: #b9bfd3; }
+  .moves { margin-top: 10px; }
+  .move { font-size: 16px; margin: 4px 0; }
+  .move .dash { color: #b9bfd3; margin-right: 6px; }
+  .empty { color: #7d849c; font-style: italic; }
+  .msg { text-align: center; font-size: 18px; color: #b9bfd3; margin: 40px auto; max-width: 640px; line-height: 1.5; }
+  .load { display: flex; gap: 8px; max-width: 640px; margin: 0 auto; }
+  .load input { flex: 1; padding: 12px 14px; font-size: 16px; font-family: Arial, Helvetica, sans-serif; border-radius: 10px; border: none; }
+  .load button { padding: 12px 18px; font-size: 16px; font-family: Arial, Helvetica, sans-serif; font-weight: bold; border-radius: 10px; border: none; background: #4a6cf7; color: #fff; cursor: pointer; }
+  .bad { color: #ff8a80; }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<header>
+  <h1 id="teamName">Z-Mon Teams</h1>
+  <div class="by" id="byLine"></div>
+</header>
+<main id="main"></main>
+
 <script>
-// ===================================================================
-// Zaxon Monsters team viewer. The whole team is inside the code at the end of the link
-// (for example .../?1abc23...), so this page needs no server. Keep it next to the folders
-// "monster sprites" and "item sprites" so the pictures show up.
-// MOVES and ITEMS are append-only and must stay in the same order as TEAM_ID_MOVES /
-// TEAM_ID_ITEMS in control.gd. Add new monsters to MONSTERS with their game number.
-// ===================================================================
-const PLAYER_NAME = "Default User";
-const MONSTERS = {
-  1:  { name: "Charlie Kirk", types: ["Fire"],            ability: "Master Debater",       sprite: "monster sprites/charlie_kirk.png" },
-  2:  { name: "Hashirama",    types: ["Plant"],           ability: "Sage Regeneration",    sprite: "monster sprites/hashirama.png" },
-  3:  { name: "Fishstick",    types: ["Water"],           ability: "Panic Mode",           sprite: "monster sprites/fishstick.png" },
-  4:  { name: "Whomp",        types: ["Earth"],           ability: "The Wall",             sprite: "monster sprites/whomp.png" },
-  5:  { name: "Killua",       types: ["Electric"],        ability: "Godspeed",             sprite: "monster sprites/killua.png" },
-  6:  { name: "Naruto",       types: ["Wind"],            ability: "Nine-Tails Chakra",    sprite: "monster sprites/naruto.png" },
-  7:  { name: "Sub-Zero",     types: ["Frost"],           ability: "Cryomancer's Guard",   sprite: "monster sprites/sub-zero.png" },
-  8:  { name: "Kid Goku",     types: ["Neutral"],         ability: "Saiyan Spirit",        sprite: "monster sprites/kid_goku.png" },
-  9:  { name: "Todoroki",     types: ["Fire", "Frost"],   ability: "Elemental Resilience", sprite: "monster sprites/todoroki.png" },
-  10: { name: "Swamp Thing",  types: ["Plant", "Earth"],  ability: "Nature's Blessing",    sprite: "monster sprites/swamp_thing.png" },
-  11: { name: "Giyu",         types: ["Water", "Neutral"],ability: "Dead Calm",            sprite: "monster sprites/giyu.png" },
-  12: { name: "Storm",        types: ["Electric", "Wind"],ability: "Elemental Mastery",    sprite: "monster sprites/storm.png" }
+// =====================================================================
+// Z-Mon Teams: shows a team from the Team ID at the end of the link
+// (https://therealzaxon.github.io/Z-Mon_Teams/?<Team ID>). No server needed.
+//
+// IMPORTANT: MOVES and ITEMS must match TEAM_ID_MOVES and TEAM_ID_ITEMS in control.gd,
+// in the same order. They are "append only": new ones go at the END, never reorder or remove.
+// =====================================================================
+const TEAM_ID_VERSION = 1;
+const TEAM_ID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
+const EV_ORDER = ["HP", "ATK", "SPA", "DEF", "SPD", "SPE"];
+const EV_COLORS = { HP: "#ff5a52", ATK: "#ff9f43", SPA: "#ffd23f", DEF: "#4cd97b", SPD: "#4aa8ff", SPE: "#b57bff" };
+
+const TYPE_COLORS = {
+  Fire: "#E8742C", Plant: "#4DA64D", Water: "#3B82D6", Earth: "#9A7B4F",
+  Electric: "#C9A227", Wind: "#7A8FD6", Frost: "#56B7D4", Neutral: "#7D7D7D"
 };
+
+// [move name, move type] in Team ID order
 const MOVES = [
-  ["Fire Punch","Fire"],["Flare Blitz","Fire"],["Flame Kick","Fire"],["Flame Jet","Fire"],["Flame Charge","Fire"],
-  ["Flamethrower","Fire"],["Overheat","Fire"],["Heatwave","Fire"],["Fire Spin","Fire"],["Blaze Blast","Fire"],
-  ["Leaf Blade","Plant"],["Wood Hammer","Plant"],["Horn Leech","Plant"],["Leafnado","Plant"],["Energy Ball","Plant"],
-  ["Leaf Storm","Plant"],["Giga Drain","Plant"],["Root Trap","Plant"],["Florae Frenzy","Plant"],
-  ["Waterfall","Water"],["Wave Crash","Water"],["Fish Slap","Water"],["Water Wave","Water"],["Aqua Beam","Water"],
-  ["Hydro Pump","Water"],["Tsunami","Water"],["Whirlpool","Water"],["Cascade Cannon","Water"],
-  ["Earthquake","Earth"],["Rock Knuckles","Earth"],["Rockslide","Earth"],["Boulder Bash","Earth"],["Earth Power","Earth"],["Sand Coffin","Earth"],
-  ["Volt Tackle","Electric"],["Chidori","Electric"],["Thunderbolt","Electric"],["Lightning","Electric"],["Volt Switch","Electric"],
-  ["Tornado","Wind"],["Hurricane","Wind"],
-  ["Avalanche","Frost"],["Frost Beam","Frost"],["Blizzard","Frost"],["Icy Wind","Frost"],
-  ["Double Edge","Neutral"],["Fake Out","Neutral"],["Swords Dance","Neutral"],["Dragon Dance","Neutral"],
-  ["Will-O-Wisp","Fire"],["Frostbite","Frost"],["Thunder Wave","Electric"],["Tailwind","Wind"],["Helping Hand","Neutral"]
+  ["Fire Punch","Fire"], ["Flare Blitz","Fire"], ["Flame Kick","Fire"], ["Flame Jet","Fire"], ["Flame Charge","Fire"],
+  ["Flamethrower","Fire"], ["Overheat","Fire"], ["Heatwave","Fire"], ["Fire Spin","Fire"], ["Blaze Blast","Fire"],
+  ["Leaf Blade","Plant"], ["Wood Hammer","Plant"], ["Horn Leech","Plant"], ["Leafnado","Plant"], ["Energy Ball","Plant"],
+  ["Leaf Storm","Plant"], ["Giga Drain","Plant"], ["Root Trap","Plant"], ["Florae Frenzy","Plant"],
+  ["Waterfall","Water"], ["Wave Crash","Water"], ["Fish Slap","Water"], ["Water Wave","Water"], ["Aqua Beam","Water"],
+  ["Hydro Pump","Water"], ["Tsunami","Water"], ["Whirlpool","Water"], ["Cascade Cannon","Water"],
+  ["Earthquake","Earth"], ["Rock Knuckles","Earth"], ["Rockslide","Earth"], ["Boulder Bash","Earth"], ["Earth Power","Earth"], ["Sand Coffin","Earth"],
+  ["Volt Tackle","Electric"], ["Chidori","Electric"], ["Thunderbolt","Electric"], ["Lightning","Electric"], ["Volt Switch","Electric"],
+  ["Tornado","Wind"], ["Hurricane","Wind"],
+  ["Avalanche","Frost"], ["Frost Beam","Frost"], ["Blizzard","Frost"], ["Icy Wind","Frost"],
+  ["Double Edge","Neutral"], ["Fake Out","Neutral"], ["Swords Dance","Neutral"], ["Dragon Dance","Neutral"],
+  ["Will-O-Wisp","Fire"], ["Frostbite","Frost"], ["Thunder Wave","Electric"], ["Tailwind","Wind"], ["Helping Hand","Neutral"],
+  ["Trick Room","Neutral"], ["Disable","Neutral"], ["Encore","Neutral"], ["Taunt","Neutral"],
+  ["Aeroblast","Wind"], ["Snarl","Neutral"], ["Parting Shot","Neutral"], ["We Are Charlie Kirk","Neutral"], ["Wham Slam","Neutral"],
+  ["Ice Clone","Frost"], ["Kamehameha","Neutral"], ["Flash Freeze Heatwave","Fire"], ["Water Wheel","Water"],
+  ["Cosmic Power","Neutral"],
+  ["Close Combat","Neutral"], ["Rage Powder","Plant"], ["Light Screen","Neutral"], ["Reflect","Neutral"]
 ];
-const ITEMS = ["Assault Vest","Choice Band","Choice Scarf","Choice Specs","Focus Sash","Leftovers","Life Orb","Sitrus Berry"];
-const TYPE_COLORS = { Fire:"#E8742C", Plant:"#4DA64D", Water:"#3B82D6", Earth:"#9A7B4F", Electric:"#C9A227", Wind:"#7A8FD6", Frost:"#56B7D4", Neutral:"#7D7D7D" };
-// HP, ATK, SPA, DEF, SPD, SPE = red, orange, yellow, green, blue, violet
-const EV_STATS = [["HP","#ff4d4d"],["ATK","#ff9a3c"],["SPA","#ffd93d"],["DEF","#5ee06a"],["SPD","#4da3ff"],["SPE","#b67cff"]];
-const CHARS = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-function getCode() {
-  let s = location.search.slice(1) || location.hash.slice(1);
-  s = s.split("&")[0];
-  if (s.includes("=")) s = s.split("=").pop();
-  return decodeURIComponent(s).trim().toLowerCase();
+const ITEMS = ["Assault Vest", "Choice Band", "Choice Scarf", "Choice Specs", "Focus Sash", "Leftovers", "Life Orb", "Sitrus Berry",
+  "Covert Cloak", "Rocky Helmet", "Lum Berry", "Eject Button", "Power Herb", "White Herb", "Clear Amulet", "Weakness Policy", "Shed Shell", "Mental Herb"];
+
+// number: [name, types, ability]
+const MONSTERS = {
+  1: ["Charlie Kirk", ["Fire"], "Master Debater"],
+  2: ["Hashirama", ["Plant"], "Sage Regeneration"],
+  3: ["Fishstick", ["Water"], "Panic Mode"],
+  4: ["Whomp", ["Earth"], "The Wall"],
+  5: ["Killua", ["Electric"], "Godspeed"],
+  6: ["Naruto", ["Wind"], "Nine-Tails Chakra"],
+  7: ["Sub-Zero", ["Frost"], "Cryomancer's Guard"],
+  8: ["Kid Goku", ["Neutral"], "Saiyan Spirit"],
+  9: ["Todoroki", ["Fire", "Frost"], "Elemental Resilience"],
+  10: ["Swamp Thing", ["Plant", "Earth"], "Nature's Blessing"],
+  11: ["Giyu", ["Water", "Neutral"], "Dead Calm"],
+  12: ["Storm", ["Electric", "Wind"], "Elemental Mastery"]
+};
+
+const PLAYER_NAME = "Default User";   // no player names in the game yet
+
+// ---------- Team ID decoding (same as decode_team_id in control.gd) ----------
+function bitsPush(bits, value, width) {
+  for (let i = width - 1; i >= 0; i--) bits.push((value >> i) & 1);
 }
+function bitsRead(r, width) {
+  let v = 0;
+  for (let i = 0; i < width; i++) {
+    v = v << 1;
+    if (r.pos >= r.bits.length) r.bad = true;
+    else v = v | r.bits[r.pos];
+    r.pos++;
+  }
+  return v;
+}
+function stripQuotes(s) { return s.replace(/["“”„‟]/g, ""); }
 
-function decode(code) {
-  if (!/^[0-9a-z]+$/.test(code)) return null;
+function decodeTeamId(text) {
+  let code = String(text || "").trim().toLowerCase();
+  let cut = -1;
+  for (const sep of ["?", "#", "/", "="]) cut = Math.max(cut, code.lastIndexOf(sep));
+  if (cut !== -1) code = code.substring(cut + 1);
+  code = code.replace(/ /g, "");
+  if (code === "") return null;
   const num = [];
   for (const ch of code) {
-    let carry = CHARS.indexOf(ch);
-    for (let i = num.length - 1; i >= 0; i--) { const v = num[i] * 36 + carry; num[i] = v & 255; carry = v >> 8; }
-    while (carry > 0) { num.unshift(carry & 255); carry >>= 8; }
+    const d = TEAM_ID_CHARS.indexOf(ch);
+    if (d === -1) return null;
+    let carry = d;
+    for (let i = num.length - 1; i >= 0; i--) {
+      const v = num[i] * 36 + carry;
+      num[i] = v % 256;
+      carry = Math.floor(v / 256);
+    }
+    while (carry > 0) { num.unshift(carry % 256); carry = Math.floor(carry / 256); }
   }
   const bits = [];
-  for (const b of num) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
-  let pos = 0, bad = false;
-  const read = w => { let v = 0; for (let i = 0; i < w; i++) { v <<= 1; if (pos >= bits.length) bad = true; else v |= bits[pos]; pos++; } return v; };
-  if (read(4) !== 1) return null;
-  const nameLen = read(7), nameBytes = [];
-  for (let i = 0; i < nameLen; i++) nameBytes.push(read(8));
-  let name = new TextDecoder().decode(new Uint8Array(nameBytes)).trim() || "Team";
+  for (const b of num) bitsPush(bits, b, 8);
+  const r = { bits: bits, pos: 0, bad: false };
+  if (bitsRead(r, 4) !== TEAM_ID_VERSION) return null;
+  const nameLen = bitsRead(r, 7);
+  const nameBytes = new Uint8Array(nameLen);
+  for (let i = 0; i < nameLen; i++) nameBytes[i] = bitsRead(r, 8);
+  let teamName = Array.from(stripQuotes(new TextDecoder().decode(nameBytes))).slice(0, 16).join("");
+  if (teamName.trim() === "") teamName = "Team";
   const mons = [];
+  let anyMon = false;
   for (let s = 0; s < 8; s++) {
-    if (!read(1)) continue;
-    const n = read(9), item = read(6), count = read(3), moves = [];
-    for (let m = 0; m < count; m++) { const id = read(7); if (MOVES[id]) moves.push(MOVES[id]); }
-    const evs = read(1) ? EV_STATS.map(() => read(6)) : null;
-    mons.push({ n, item: ITEMS[item - 1] || "", moves, evs });
+    if (bitsRead(r, 1) === 0) { mons.push(null); continue; }
+    const n = bitsRead(r, 9);
+    const itemId = bitsRead(r, 6);
+    const moveCount = bitsRead(r, 3);
+    const moves = [];
+    for (let m = 0; m < moveCount; m++) {
+      const mid = bitsRead(r, 7);
+      if (mid < MOVES.length && !moves.includes(mid)) moves.push(mid);
+    }
+    let evs = null;
+    if (bitsRead(r, 1) === 1) {
+      evs = {};
+      for (const st of EV_ORDER) evs[st] = bitsRead(r, 6);
+    }
+    const item = (itemId >= 1 && itemId <= ITEMS.length) ? ITEMS[itemId - 1] : "";
+    mons.push({ n: n, item: item, moves: moves.slice(0, 4), evs: evs });
+    anyMon = true;
   }
-  if (bad || mons.length === 0) return null;
-  return { name, mons };
+  if (r.bad || !anyMon) return null;
+  return { name: teamName, mons: mons };
 }
 
-function span(text, cls, color) {
-  const e = document.createElement("span");
-  e.textContent = text;
+// ---------- Page ----------
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
   if (cls) e.className = cls;
-  if (color) e.style.color = color;
+  if (text !== undefined) e.textContent = text;
   return e;
 }
 
-// Tries each picture file name in turn; hides the picture if none exist
-function tryImage(img, paths, onLoad) {
-  let i = 0;
-  img.onerror = () => { i++; if (i < paths.length) img.src = encodeURI(paths[i]); else img.remove(); };
-  img.onload = onLoad || null;
-  img.src = encodeURI(paths[0]);
-}
-
-function itemFiles(name) {
-  const base = "item sprites/";
-  return [base + name.toLowerCase().replace(/[ -]/g, "_") + ".png", base + name + ".png",
-          base + name.toLowerCase().replace(/[ _-]/g, "") + ".png"];
-}
-
-function render() {
-  const root = document.getElementById("root");
-  const team = decode(getCode());
-  if (!team) {
-    root.innerHTML = '<div class="empty">No team found.<br>Open this page with a Team ID at the end of the link.</div>';
-    return;
-  }
-  document.title = team.name + " - Zaxon Monsters";
-  const page = document.createElement("div"); page.className = "page";
-  const grid = document.createElement("div"); grid.className = "team";
+function showTeam(team) {
+  document.title = team.name + " - Z-Mon Teams";
+  document.getElementById("teamName").textContent = team.name;
+  document.getElementById("byLine").textContent = "by " + PLAYER_NAME;
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  const grid = el("div", "grid");
   for (const m of team.mons) {
-    const data = MONSTERS[m.n] || { name: "Unknown Monster #" + m.n, types: [], ability: "???", sprite: "" };
-    const card = document.createElement("div"); card.className = "mon";
-    const pic = document.createElement("div"); pic.className = "pic";
-    if (data.sprite) {
-      const img = document.createElement("img"); img.className = "sprite"; img.alt = "";
-      pic.appendChild(img);
-      tryImage(img, [data.sprite], () => pic.classList.add("loaded"));
-    }
+    if (m === null) continue;
+    const info = MONSTERS[m.n] || ["Unknown Monster (No. " + m.n + ")", [], "???"];
+    const card = el("div", "mon");
+
+    const top = el("div", "top", info[0]);
     if (m.item) {
-      const it = document.createElement("img"); it.className = "item"; it.alt = "";
-      pic.appendChild(it);
-      tryImage(it, itemFiles(m.item));
+      top.appendChild(el("span", "at", " @ "));
+      top.appendChild(document.createTextNode(m.item));
     }
-    const info = document.createElement("div"); info.className = "info";
-    const line = (...parts) => { parts.forEach(p => info.appendChild(typeof p === "string" ? document.createTextNode(p) : p)); info.appendChild(document.createTextNode("\n")); };
-    line(data.name + (m.item ? " @ " + m.item : ""));
-    line(span("Ability: ", "lbl"), data.ability);
-    line(span("Level: ", "lbl"), "50");
+    card.appendChild(top);
+
+    const types = el("div", "types");
+    for (const t of info[1]) {
+      const b = el("span", "type", t.toUpperCase());
+      b.style.background = TYPE_COLORS[t] || "#7D7D7D";
+      types.appendChild(b);
+    }
+    card.appendChild(types);
+
+    const ab = el("div", "line");
+    ab.appendChild(el("span", "label", "Ability: "));
+    ab.appendChild(document.createTextNode(info[2]));
+    card.appendChild(ab);
+
+    const lv = el("div", "line");
+    lv.appendChild(el("span", "label", "Level: "));
+    lv.appendChild(document.createTextNode("50"));
+    card.appendChild(lv);
+
     if (m.evs) {
-      const parts = [span("EVs: ", "lbl")];
-      let first = true;
-      m.evs.forEach((v, i) => {
-        if (v <= 0) return;
-        if (!first) parts.push(" / ");
-        parts.push(span(v + " " + EV_STATS[i][0], null, EV_STATS[i][1]));
-        first = false;
-      });
-      if (!first) line(...parts);
+      const parts = EV_ORDER.filter(st => m.evs[st] > 0);
+      if (parts.length > 0) {
+        const ev = el("div", "line");
+        ev.appendChild(el("span", "label", "EVs: "));
+        parts.forEach((st, i) => {
+          if (i > 0) ev.appendChild(el("span", "label", " / "));
+          const s = el("span", "", m.evs[st] + " " + st);
+          s.style.color = EV_COLORS[st];
+          ev.appendChild(s);
+        });
+        card.appendChild(ev);
+      }
     }
-    for (const [mv, type] of m.moves) line(span("- ", null, TYPE_COLORS[type] || "#888"), mv);
-    card.append(pic, info);
+
+    const mv = el("div", "moves");
+    if (m.moves.length === 0) mv.appendChild(el("div", "move empty", "No moves"));
+    for (const id of m.moves) {
+      const row = el("div", "move");
+      row.appendChild(el("span", "dash", "-"));
+      const name = el("span", "", MOVES[id][0]);
+      name.style.color = TYPE_COLORS[MOVES[id][1]] || "#f2f2f2";
+      row.appendChild(name);
+      mv.appendChild(row);
+    }
+    card.appendChild(mv);
     grid.appendChild(card);
   }
-  const side = document.createElement("div"); side.className = "side";
-  const h = document.createElement("h1"); h.textContent = team.name;
-  side.append(h, span("by " + PLAYER_NAME, "by"));
-  page.append(grid, side);
-  root.appendChild(page);
+  main.appendChild(grid);
 }
-render();
-window.addEventListener("hashchange", () => { document.getElementById("root").innerHTML = ""; render(); });
+
+function showLoader(badText) {
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  const msg = el("div", "msg", "Paste a Team ID or team link from the game to see the team.");
+  main.appendChild(msg);
+  if (badText) main.appendChild(el("div", "msg bad", "That Team ID isn't valid."));
+  const form = el("form", "load");
+  const input = el("input");
+  input.placeholder = "Team ID or link";
+  const btn = el("button", "", "Show Team");
+  btn.type = "submit";
+  form.appendChild(input);
+  form.appendChild(btn);
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    let code = input.value.trim();
+    const cut = Math.max(code.lastIndexOf("?"), code.lastIndexOf("#"), code.lastIndexOf("/"), code.lastIndexOf("="));
+    if (cut !== -1) code = code.substring(cut + 1);
+    if (code !== "") location.search = "?" + code.toLowerCase();
+  };
+  main.appendChild(form);
+}
+
+(function start() {
+  const raw = (location.search.substring(1) || location.hash.substring(1)).trim();
+  if (raw === "") { showLoader(false); return; }
+  const team = decodeTeamId(raw);
+  if (team === null) showLoader(true);
+  else showTeam(team);
+})();
 </script>
 </body>
 </html>
