@@ -66,9 +66,14 @@ const MOVES = [
   ["Tornado","Wind"],["Hurricane","Wind"],
   ["Avalanche","Frost"],["Frost Beam","Frost"],["Blizzard","Frost"],["Icy Wind","Frost"],
   ["Double Edge","Neutral"],["Fake Out","Neutral"],["Swords Dance","Neutral"],["Dragon Dance","Neutral"],
-  ["Will-O-Wisp","Fire"],["Frostbite","Frost"],["Thunder Wave","Electric"],["Tailwind","Wind"],["Helping Hand","Neutral"]
+  ["Will-O-Wisp","Fire"],["Frostbite","Frost"],["Thunder Wave","Electric"],["Tailwind","Wind"],["Helping Hand","Neutral"],
+  ["Trick Room","Neutral"],["Disable","Neutral"],["Encore","Neutral"],["Taunt","Neutral"],
+  ["Aeroblast","Wind"],["Snarl","Neutral"],["Parting Shot","Neutral"],["We Are Charlie Kirk","Neutral"],["Wham Slam","Neutral"],
+  ["Ice Clone","Frost"],["Kamehameha","Neutral"],["Flash Freeze Heatwave","Fire"],["Water Wheel","Water"],
+  ["Cosmic Power","Neutral"]
 ];
-const ITEMS = ["Assault Vest","Choice Band","Choice Scarf","Choice Specs","Focus Sash","Leftovers","Life Orb","Sitrus Berry"];
+const ITEMS = ["Assault Vest","Choice Band","Choice Scarf","Choice Specs","Focus Sash","Leftovers","Life Orb","Sitrus Berry",
+  "Covert Cloak","Rocky Helmet","Lum Berry","Eject Button","Power Herb","White Herb","Clear Amulet","Weakness Policy","Shed Shell","Mental Herb"];
 const TYPE_COLORS = { Fire:"#FF8C36", Plant:"#83D958", Water:"#2A75FF", Earth:"#DFBC6C", Electric:"#FFDC36", Wind:"#B79DFF", Frost:"#98D8D8", Neutral:"#B7B783" };
 // HP, ATK, SPA, DEF, SPD, SPE = red, orange, yellow, green, blue, violet
 const EV_STATS = [["HP","#FF0303"],["ATK","#FF8C36"],["SPA","#FFDC36"],["DEF","#83D958"],["SPD","#2A75FF"],["SPE","#B79DFF"]];
@@ -127,8 +132,10 @@ function tryImage(img, paths, onLoad) {
 
 function itemFiles(name) {
   const base = "item sprites/";
-  return [base + name.toLowerCase().replace(/[ -]/g, "_") + ".png", base + name + ".png",
-          base + name.toLowerCase().replace(/[ _-]/g, "") + ".png"];
+  const low = name.toLowerCase();
+  return [base + low.replace(/[ -]/g, "_") + ".png", base + name + ".png", base + low.replace(/[ _-]/g, "") + ".png",
+          base + name.replace(/[ -]/g, "_") + ".png", base + low + ".png", base + low.replace(/[ _]/g, "-") + ".png",
+          base + name.replace(/[ _-]/g, "") + ".png"];
 }
 
 function render() {
